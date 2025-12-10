@@ -1,4 +1,5 @@
 # الأساسيات
+flet 
 pyinstaller>=5.0
 setuptools>=65.0
 
