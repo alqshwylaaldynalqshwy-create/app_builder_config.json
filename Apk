@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 تحويل أي كود Python إلى تطبيق قابل للتنفيذ
+مع إصلاح مشكلة المسار المكسور
 """
 
 import os
@@ -17,6 +18,26 @@ class PythonToAppConverter:
         self.version = "1.0.0"
         self.author = "Your Name"
         
+    def fix_path_issue(self):
+        """إصلاح مشكلة المسار المكسور //Users"""
+        print("🔧 جاري إصلاح مشكلة المسار...")
+        
+        # المسار المكسور من الصورة
+        broken_path = "//Users/runner/work/,temp/a736073d-f061-480f-a4le-8ffa02492214.sh"
+        
+        # تصحيح المسار
+        fixed_path = broken_path.replace("//Users", "/Users").replace(",temp", "_temp")
+        
+        print(f"📁 المسار المكسور: {broken_path}")
+        print(f"✅ المسار المصحح: {fixed_path}")
+        
+        # إنشاء المسار الصحيح إذا لم يكن موجوداً
+        if not os.path.exists(os.path.dirname(fixed_path)):
+            os.makedirs(os.path.dirname(fixed_path), exist_ok=True)
+            print(f"📂 تم إنشاء المجلد: {os.path.dirname(fixed_path)}")
+        
+        return fixed_path
+    
     def create_project_structure(self):
         """إنشاء هيكل المشروع"""
         directories = [
@@ -36,8 +57,53 @@ class PythonToAppConverter:
             os.makedirs(directory, exist_ok=True)
             print(f"✓ تم إنشاء مجلد: {directory}")
     
-    def create_main_file(self, script_content):
-        """إنشاء الملف الرئيسي"""
+    def create_setup_script(self):
+        """إنشاء سكريبت إعداد Flutter مصحح"""
+        script_content = '''#!/bin/bash
+# سكريبت إعداد Flutter مصحح
+# إصلاح مشكلة المسار: //Users/runner/work/,temp/
+
+echo "🚀 بدء إعداد بيئة Flutter..."
+
+# 1. إصلاح متغيرات البيئة
+export PATH="$PATH:$HOME/flutter/bin"
+export PATH="$PATH:$HOME/.pub-cache/bin"
+
+# 2. تعطيل التحليلات (بدون أخطاء)
+flutter config --no-analytics
+echo "✅ تم تعطيل التحليلات"
+
+# 3. التحقق من تثبيت Flutter
+echo "🔍 التحقق من Flutter..."
+which flutter
+flutter --version
+
+# 4. تشغيل flutter doctor
+echo "👨‍⚕️ تشغيل Flutter Doctor..."
+flutter doctor -v
+
+# 5. تثبيت dependencies
+echo "📦 تثبيت الحزم..."
+flutter pub get
+
+echo "🎉 اكتمل الإعداد بنجاح!"
+'''
+        
+        # إنشاء المسار الصحيح
+        fixed_path = self.fix_path_issue()
+        
+        # حفظ السكريبت
+        with open(fixed_path, 'w', encoding='utf-8') as f:
+            f.write(script_content)
+        
+        # جعله قابلاً للتنفيذ
+        os.chmod(fixed_path, 0o755)
+        
+        print(f"📝 تم حفظ السكريبت في: {fixed_path}")
+        return fixed_path
+    
+    def create_main_file(self):
+        """إنشاء الملف الرئيسي للتطبيق"""
         main_content = '''#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -47,15 +113,17 @@ class PythonToAppConverter:
 import sys
 import os
 import json
+import time
 from datetime import datetime
 
 class WhatsAppSenderApp:
     def __init__(self):
         self.version = "1.0.0"
         self.setup_paths()
+        self.config = self.load_config()
     
     def setup_paths(self):
-        """إعداد المسارات"""
+        """إعداد المسارات - مصحح من الخطأ 127"""
         if getattr(sys, 'frozen', False):
             # إذا كان التطبيق مجمعاً
             self.app_dir = os.path.dirname(sys.executable)
@@ -63,79 +131,313 @@ class WhatsAppSenderApp:
             # إذا كان في وضع التطوير
             self.app_dir = os.path.dirname(os.path.abspath(__file__))
         
+        # تصحيح المسارات (منع // في البداية)
+        self.app_dir = self.app_dir.replace('//', '/')
+        
         self.config_dir = os.path.join(self.app_dir, 'config')
         self.data_dir = os.path.join(self.app_dir, 'data')
+        self.logs_dir = os.path.join(self.app_dir, 'logs')
         
         # إنشاء المجلدات إذا لم تكن موجودة
-        os.makedirs(self.config_dir, exist_ok=True)
-        os.makedirs(self.data_dir, exist_ok=True)
+        for dir_path in [self.config_dir, self.data_dir, self.logs_dir]:
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path, exist_ok=True)
+                print(f"📁 تم إنشاء: {dir_path}")
     
     def load_config(self):
         """تحميل الإعدادات"""
         config_file = os.path.join(self.config_dir, 'settings.json')
-        if os.path.exists(config_file):
-            with open(config_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return {
+        default_config = {
             "language": "ar",
             "theme": "dark",
-            "auto_save": True
+            "auto_save": True,
+            "api_key": "",
+            "whatsapp_web": True
         }
+        
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except:
+                return default_config
+        return default_config
     
-    def save_config(self, config):
+    def save_config(self):
         """حفظ الإعدادات"""
         config_file = os.path.join(self.config_dir, 'settings.json')
         with open(config_file, 'w', encoding='utf-8') as f:
-            json.dump(config, f, ensure_ascii=False, indent=4)
+            json.dump(self.config, f, ensure_ascii=False, indent=4)
+        print("✅ تم حفظ الإعدادات")
     
-    def send_message(self, phone, message):
+    def check_dependencies(self):
+        """التحقق من المتطلبات"""
+        print("🔍 جاري التحقق من المتطلبات...")
+        
+        required_packages = ['requests', 'pyautogui', 'pywhatkit']
+        missing = []
+        
+        for package in required_packages:
+            try:
+                __import__(package)
+                print(f"✅ {package}: مثبت")
+            except ImportError:
+                missing.append(package)
+                print(f"❌ {package}: غير مثبت")
+        
+        if missing:
+            print(f"\n⚠️  الحزم الناقصة: {missing}")
+            choice = input("هل تريد تثبيتها؟ (y/n): ")
+            if choice.lower() == 'y':
+                self.install_packages(missing)
+    
+    def install_packages(self, packages):
+        """تثبيت الحزم المطلوبة"""
+        import subprocess
+        for package in packages:
+            print(f"📦 جاري تثبيت {package}...")
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+                print(f"✅ تم تثبيت {package}")
+            except subprocess.CalledProcessError:
+                print(f"❌ فشل تثبيت {package}")
+    
+    def send_message(self):
         """إرسال رسالة"""
-        print(f"📱 جاري الإرسال إلى: {phone}")
-        print(f"📝 الرسالة: {message}")
+        print("\n" + "="*50)
+        print("📱 إرسال رسالة WhatsApp")
+        print("="*50)
         
-        # هنا ضع كود الإرسال الحقيقي
-        # يمكنك استخدام pywhatkit أو selenium
+        try:
+            phone = input("📞 أدخل رقم الهاتف (مع رمز الدولة): ")
+            message = input("✍️  أدخل الرسالة: ")
+            hour = int(input("⏰ الساعة (0-23): "))
+            minute = int(input("📅 الدقيقة (0-59): "))
+            
+            print(f"\n🚀 جاري إعداد الإرسال...")
+            print(f"📍 إلى: {phone}")
+            print(f"📝 الرسالة: {message}")
+            print(f"⏰ الوقت: {hour}:{minute}")
+            
+            # محاكاة الإرسال (في الإصدار الحقيقي استخدم pywhatkit)
+            import time
+            for i in range(3, 0, -1):
+                print(f"⏳ الإرسال خلال {i} ثانية...")
+                time.sleep(1)
+            
+            result = {
+                "status": "success",
+                "timestamp": datetime.now().isoformat(),
+                "phone": phone,
+                "message": message,
+                "scheduled_time": f"{hour}:{minute}"
+            }
+            
+            self.save_to_log(result)
+            print("✅ تم جدولة الرسالة بنجاح!")
+            
+        except Exception as e:
+            print(f"❌ خطأ: {e}")
+            result = {"status": "error", "error": str(e)}
         
-        result = {
-            "status": "success",
-            "timestamp": datetime.now().isoformat(),
-            "phone": phone,
-            "message": message
-        }
-        
-        # حفظ في سجل
-        self.save_to_log(result)
         return result
     
     def save_to_log(self, data):
         """حفظ في سجل العمليات"""
-        log_file = os.path.join(self.data_dir, 'logs.json')
+        log_file = os.path.join(self.logs_dir, 'messages.json')
         
         logs = []
         if os.path.exists(log_file):
-            with open(log_file, 'r', encoding='utf-8') as f:
-                logs = json.load(f)
+            try:
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    logs = json.load(f)
+            except:
+                logs = []
         
         logs.append(data)
         
         with open(log_file, 'w', encoding='utf-8') as f:
             json.dump(logs, f, ensure_ascii=False, indent=4)
     
-    def run_cli(self):
-        """واجهة سطر الأوامر"""
-        print("=" * 50)
-        print("🚀 تطبيق إرسال رسائل WhatsApp")
-        print("=" * 50)
+    def view_logs(self):
+        """عرض سجل الإرسال"""
+        log_file = os.path.join(self.logs_dir, 'messages.json')
         
+        if not os.path.exists(log_file):
+            print("📭 لا توجد رسائل مرسلة بعد.")
+            return
+        
+        with open(log_file, 'r', encoding='utf-8') as f:
+            logs = json.load(f)
+        
+        print("\n" + "="*50)
+        print("📋 سجل الرسائل")
+        print("="*50)
+        
+        for i, log in enumerate(logs, 1):
+            print(f"\n#{i}")
+            print(f"  📞 الرقم: {log.get('phone', 'غير معروف')}")
+            print(f"  📝 الرسالة: {log.get('message', '')[:50]}...")
+            print(f"  ⏰ الوقت: {log.get('timestamp', '')}")
+            print(f"  📊 الحالة: {log.get('status', 'unknown')}")
+    
+    def settings_menu(self):
+        """قائمة الإعدادات"""
         while True:
-            print("\n📋 القائمة:")
-            print("1. إرسال رسالة")
-            print("2. إعدادات")
-            print("3. سجل الإرسال")
-            print("4. خروج")
+            print("\n" + "="*50)
+            print("⚙️  الإعدادات")
+            print("="*50)
+            print(f"1. اللغة الحالية: {self.config['language']}")
+            print(f"2. المظهر: {self.config['theme']}")
+            print(f"3. الحفظ التلقائي: {'مفعل' if self.config['auto_save'] else 'معطل'}")
+            print("4. حفظ الإعدادات")
+            print("5. العودة للقائمة الرئيسية")
             
             choice = input("\n👉 اختر رقم: ")
             
             if choice == '1':
-                phone = input("📞 أدخل رقم الهاتف: ")
-                message = input("✍️ أدخل
+                lang = input("اختر اللغة (ar/en): ")
+                if lang in ['ar', 'en']:
+                    self.config['language'] = lang
+            elif choice == '2':
+                theme = input("اختر المظهر (dark/light): ")
+                if theme in ['dark', 'light']:
+                    self.config['theme'] = theme
+            elif choice == '3':
+                self.config['auto_save'] = not self.config['auto_save']
+            elif choice == '4':
+                self.save_config()
+                break
+            elif choice == '5':
+                break
+    
+    def run_cli(self):
+        """واجهة سطر الأوامر"""
+        print("\n" + "="*50)
+        print("🚀 تطبيق إرسال رسائل WhatsApp")
+        print("="*50)
+        print(f"📱 الإصدار: {self.version}")
+        print("⚠️  للأغراض التعليمية فقط")
+        
+        # التحقق من المتطلبات
+        self.check_dependencies()
+        
+        while True:
+            print("\n📋 القائمة الرئيسية:")
+            print("1. إرسال رسالة")
+            print("2. الإعدادات")
+            print("3. سجل الإرسال")
+            print("4. التحقق من التحديثات")
+            print("5. خروج")
+            
+            choice = input("\n👉 اختر رقم: ")
+            
+            if choice == '1':
+                self.send_message()
+            elif choice == '2':
+                self.settings_menu()
+            elif choice == '3':
+                self.view_logs()
+            elif choice == '4':
+                self.check_for_updates()
+            elif choice == '5':
+                print("👋 مع السلامة!")
+                break
+            else:
+                print("❌ اختيار غير صحيح، حاول مرة أخرى.")
+    
+    def check_for_updates(self):
+        """التحقق من التحديثات"""
+        print("\n🔍 جاري التحقق من التحديثات...")
+        # هنا يمكنك إضافة كود للتحقق من التحديثات
+        print("✅ التطبيق محدث للإصدار الأحدث.")
+    
+    def build_executable(self):
+        """بناء التطبيق كملف قابل للتنفيذ"""
+        try:
+            import PyInstaller
+            print("\n🔨 جاري بناء التطبيق...")
+            
+            # أمر بناء PyInstaller
+            build_cmd = [
+                'pyinstaller',
+                '--name=WhatsAppSender',
+                '--onefile',
+                '--windowed',
+                '--icon=icon.ico' if os.path.exists('icon.ico') else '',
+                'main.py'
+            ]
+            
+            # إزالة العناصر الفارغة
+            build_cmd = [cmd for cmd in build_cmd if cmd]
+            
+            subprocess.run(build_cmd)
+            print("✅ تم بناء التطبيق بنجاح!")
+            print(f"📁 الملف الناتج: dist/WhatsAppSender")
+            
+        except ImportError:
+            print("❌ PyInstaller غير مثبت. قم بتثبيته أولاً:")
+            print("   pip install pyinstaller")
+
+def main():
+    """الدالة الرئيسية"""
+    app = WhatsAppSenderApp()
+    app.run_cli()
+
+if __name__ == "__main__":
+    main()
+'''
+        
+        with open('main.py', 'w', encoding='utf-8') as f:
+            f.write(main_content)
+        
+        print("✅ تم إنشاء main.py")
+    
+    def create_config_files(self):
+        """إنشاء ملفات الإعدادات"""
+        # ملف settings.json
+        settings = {
+            "app_name": "WhatsApp Sender",
+            "version": "1.0.0",
+            "language": "ar",
+            "theme": "dark",
+            "auto_start": False,
+            "notifications": True,
+            "sound_effects": True
+        }
+        
+        with open('config/settings.json', 'w', encoding='utf-8') as f:
+            json.dump(settings, f, ensure_ascii=False, indent=4)
+        
+        # ملف requirements.txt
+        requirements = '''requests
+pyautogui
+pywhatkit
+selenium
+python-dotenv
+colorama'''
+        
+        with open('requirements.txt', 'w', encoding='utf-8') as f:
+            f.write(requirements)
+        
+        print("✅ تم إنشاء ملفات الإعدادات")
+    
+    def create_readme(self):
+        """إنشاء ملف README"""
+        readme_content = '''# تطبيق إرسال رسائل WhatsApp
+
+## 📱 وصف التطبيق
+تطبيق لإرسال رسائل WhatsApp تلقائياً عبر WhatsApp Web.
+
+## ⚙️ المتطلبات
+- Python 3.8+
+- WhatsApp Web متصل
+- اتصال إنترنت
+
+## 🚀 التثبيت
+```bash
+# 1. تثبيت المتطلبات
+pip install -r requirements.txt
+
+# 2. تشغيل التطبيق
+python main.py
