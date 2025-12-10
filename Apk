@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+تحويل أي كود Python إلى تطبيق قابل للتنفيذ
+"""
+
+import os
+import sys
+import shutil
+import subprocess
+import json
+from pathlib import Path
+
+class PythonToAppConverter:
+    def __init__(self):
+        self.project_name = "whatsapp_sender"
+        self.version = "1.0.0"
+        self.author = "Your Name"
+        
+    def create_project_structure(self):
+        """إنشاء هيكل المشروع"""
+        directories = [
+            "src",
+            "src/core",
+            "src/ui",
+            "src/utils",
+            "data",
+            "config",
+            "build",
+            "dist",
+            "docs",
+            "tests"
+        ]
+        
+        for directory in directories:
+            os.makedirs(directory, exist_ok=True)
+            print(f"✓ تم إنشاء مجلد: {directory}")
+    
+    def create_main_file(self, script_content):
+        """إنشاء الملف الرئيسي"""
+        main_content = '''#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+تطبيق إرسال رسائل WhatsApp
+"""
+
+import sys
+import os
+import json
+from datetime import datetime
+
+class WhatsAppSenderApp:
+    def __init__(self):
+        self.version = "1.0.0"
+        self.setup_paths()
+    
+    def setup_paths(self):
+        """إعداد المسارات"""
+        if getattr(sys, 'frozen', False):
+            # إذا كان التطبيق مجمعاً
+            self.app_dir = os.path.dirname(sys.executable)
+        else:
+            # إذا كان في وضع التطوير
+            self.app_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        self.config_dir = os.path.join(self.app_dir, 'config')
+        self.data_dir = os.path.join(self.app_dir, 'data')
+        
+        # إنشاء المجلدات إذا لم تكن موجودة
+        os.makedirs(self.config_dir, exist_ok=True)
+        os.makedirs(self.data_dir, exist_ok=True)
+    
+    def load_config(self):
+        """تحميل الإعدادات"""
+        config_file = os.path.join(self.config_dir, 'settings.json')
+        if os.path.exists(config_file):
+            with open(config_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {
+            "language": "ar",
+            "theme": "dark",
+            "auto_save": True
+        }
+    
+    def save_config(self, config):
+        """حفظ الإعدادات"""
+        config_file = os.path.join(self.config_dir, 'settings.json')
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=4)
+    
+    def send_message(self, phone, message):
+        """إرسال رسالة"""
+        print(f"📱 جاري الإرسال إلى: {phone}")
+        print(f"📝 الرسالة: {message}")
+        
+        # هنا ضع كود الإرسال الحقيقي
+        # يمكنك استخدام pywhatkit أو selenium
+        
+        result = {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "phone": phone,
+            "message": message
+        }
+        
+        # حفظ في سجل
+        self.save_to_log(result)
+        return result
+    
+    def save_to_log(self, data):
+        """حفظ في سجل العمليات"""
+        log_file = os.path.join(self.data_dir, 'logs.json')
+        
+        logs = []
+        if os.path.exists(log_file):
+            with open(log_file, 'r', encoding='utf-8') as f:
+                logs = json.load(f)
+        
+        logs.append(data)
+        
+        with open(log_file, 'w', encoding='utf-8') as f:
+            json.dump(logs, f, ensure_ascii=False, indent=4)
+    
+    def run_cli(self):
+        """واجهة سطر الأوامر"""
+        print("=" * 50)
+        print("🚀 تطبيق إرسال رسائل WhatsApp")
+        print("=" * 50)
+        
+        while True:
+            print("\n📋 القائمة:")
+            print("1. إرسال رسالة")
+            print("2. إعدادات")
+            print("3. سجل الإرسال")
+            print("4. خروج")
+            
+            choice = input("\n👉 اختر رقم: ")
+            
+            if choice == '1':
+                phone = input("📞 أدخل رقم الهاتف: ")
+                message = input("✍️ أدخل
