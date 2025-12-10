@@ -1,0 +1,83 @@
+import asyncio
+import websockets
+import json
+import base64
+from datetime import datetime
+
+# تخزين الاتصالات النشطة
+connected_clients = {}
+
+async def handle_client(websocket, path):
+    client_id = None
+    
+    try:
+        async for message in websocket:
+            data = json.loads(message)
+            
+            # تسجيل الدخول
+            if data['type'] == 'login':
+                client_id = data['client_id']
+                connected_clients[client_id] = websocket
+                print(f"✅ المستخدم {client_id} متصل")
+                
+                # إرسال تأكيد الاتصال
+                await websocket.send(json.dumps({
+                    'type': 'login_success',
+                    'message': 'تم الاتصال بنجاح'
+                }))
+            
+            # إرسال رسالة نصية
+            elif data['type'] == 'text_message':
+                target_id = data['to']
+                message_content = data['message']
+                
+                if target_id in connected_clients:
+                    await connected_clients[target_id].send(json.dumps({
+                        'type': 'text_message',
+                        'from': client_id,
+                        'message': message_content,
+                        'timestamp': datetime.now().isoformat()
+                    }))
+                    print(f"📨 {client_id} → {target_id}: {message_content}")
+            
+            # إرسال صورة
+            elif data['type'] == 'image_message':
+                target_id = data['to']
+                image_data = data['image']  # base64 encoded
+                
+                if target_id in connected_clients:
+                    await connected_clients[target_id].send(json.dumps({
+                        'type': 'image_message',
+                        'from': client_id,
+                        'image': image_data,
+                        'timestamp': datetime.now().isoformat()
+                    }))
+                    print(f"🖼️ {client_id} → {target_id}: صورة")
+            
+            # إرسال صوت
+            elif data['type'] == 'audio_message':
+                target_id = data['to']
+                audio_data = data['audio']  # base64 encoded
+                
+                if target_id in connected_clients:
+                    await connected_clients[target_id].send(json.dumps({
+                        'type': 'audio_message',
+                        'from': client_id,
+                        'audio': audio_data,
+                        'timestamp': datetime.now().isoformat()
+                    }))
+                    print(f"🎤 {client_id} → {target_id}: رسالة صوتية")
+    
+    except websockets.exceptions.ConnectionClosed:
+        print(f"❌ المستخدم {client_id} انقطع")
+    finally:
+        if client_id in connected_clients:
+            del connected_clients[client_id]
+
+async def main():
+    server = await websockets.serve(handle_client, "0.0.0.0", 8765)
+    print("🚀 خادم المراسلة يعمل على ws://localhost:8765")
+    await server.wait_closed()
+
+if __name__ == "__main__":
+    asyncio.run(main())
